@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# === Whiptail color scheme: white background, black text (readable) ===
+# === Whiptail color scheme: white background, black text ===
 export NEWT_COLORS='
 root=white,black
 border=black,white
@@ -39,6 +39,7 @@ FOLDER=$(whiptail --inputbox "Enter project folder name:" 10 60 3>&1 1>&2 2>&3)
 TARGET_DIR="$USER_DESKTOP/$FOLDER"
 
 mkdir -p "$TARGET_DIR"
+chown -R "$REAL_USER:$REAL_USER" "$TARGET_DIR"
 cd "$TARGET_DIR" || exit 1
 
 # === Menu Loop ===
@@ -62,10 +63,12 @@ while true; do
             fi
 
             cp -r "$WORDLIST_SRC" "$DEST"
+            chown -R "$REAL_USER:$REAL_USER" "$DEST"
             whiptail --msgbox "Wordlists copied to $DEST" 10 60
             ;;
         2)
             arp-scan --localnet | tee -a network_scan.log
+            chown "$REAL_USER:$REAL_USER" network_scan.log
             whiptail --msgbox "ARP scan complete.\nLog saved to: network_scan.log" 10 60
             ;;
         3)
@@ -73,8 +76,10 @@ while true; do
                 whiptail --msgbox "No network_scan.log found. Run Option 2 first." 10 60
             else
                 grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' network_scan.log | sort -u > ip_list.txt
+                chown "$REAL_USER:$REAL_USER" ip_list.txt
                 while IFS= read -r ip; do
                     nmap -Pn -p- -sC -sV "$ip" -vvv -oA "nmap_full_$ip"
+                    chown "$REAL_USER:$REAL_USER" nmap_full_"$ip".*
                 done < ip_list.txt
                 whiptail --msgbox "Nmap scans completed.\nResults saved as nmap_full_<IP>.*" 10 60
             fi
