@@ -3,10 +3,10 @@ Just a simple recon script for kali linux
 
 To Use It:
 Create File:
-nano recon_whiptail.sh
+nano recon.sh
 
 Make executable:
-chmod +x recon_whiptail.sh
+chmod +x recon.sh
 
 Run it:
-sudo ./recon_whiptail.sh
+sudo ./recon.sh
