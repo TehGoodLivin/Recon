@@ -34,8 +34,8 @@ cd "$USER_DESKTOP" || {
     exit 1
 }
 
-# === Prompt for project folder name ===
-FOLDER=$(whiptail --inputbox "Enter project folder name:" 10 60 3>&1 1>&2 2>&3)
+# === Prompt for folder name (existing allowed) ===
+FOLDER=$(whiptail --inputbox "Enter project folder name (existing folders allowed):" 10 60 3>&1 1>&2 2>&3)
 TARGET_DIR="$USER_DESKTOP/$FOLDER"
 
 mkdir -p "$TARGET_DIR"
@@ -67,7 +67,15 @@ while true; do
             whiptail --msgbox "Wordlists copied to $DEST" 10 60
             ;;
         2)
-            arp-scan --localnet | tee -a network_scan.log
+            if [ -f network_scan.log ]; then
+                whiptail --yesno "network_scan.log already exists. Overwrite it?" 10 60
+                if [ $? -ne 0 ]; then
+                    whiptail --msgbox "Skipped arp-scan." 8 40
+                    continue
+                fi
+                rm -f network_scan.log
+            fi
+            arp-scan --localnet | tee network_scan.log
             chown "$REAL_USER:$REAL_USER" network_scan.log
             whiptail --msgbox "ARP scan complete.\nLog saved to: network_scan.log" 10 60
             ;;
@@ -77,10 +85,21 @@ while true; do
             else
                 grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' network_scan.log | sort -u > ip_list.txt
                 chown "$REAL_USER:$REAL_USER" ip_list.txt
+
                 while IFS= read -r ip; do
-                    nmap -Pn -p- -sC -sV "$ip" -vvv -oA "nmap_full_$ip"
-                    chown "$REAL_USER:$REAL_USER" nmap_full_"$ip".*
+                    OUTPUT_PREFIX="nmap_full_$ip"
+                    if [ -f "${OUTPUT_PREFIX}.nmap" ]; then
+                        whiptail --yesno "Nmap output for $ip already exists. Overwrite?" 10 60
+                        if [ $? -ne 0 ]; then
+                            echo "Skipped $ip"
+                            continue
+                        fi
+                        rm -f "${OUTPUT_PREFIX}".*
+                    fi
+                    nmap -Pn -p- -sC -sV "$ip" -vvv -oA "$OUTPUT_PREFIX"
+                    chown "$REAL_USER:$REAL_USER" "$OUTPUT_PREFIX".*
                 done < ip_list.txt
+
                 whiptail --msgbox "Nmap scans completed.\nResults saved as nmap_full_<IP>.*" 10 60
             fi
             ;;
